@@ -40,6 +40,9 @@
       "type": "header",
       "settings": {
         "logo_position": "middle-left",
+        "top_message": "Find the ideal gift for your loved ones.",
+        "choose_gift_text": "CHOOSE GIFT",
+        "choose_gift_link": "#",
         "mobile_logo_position": "center",
         "menu": "main-menu",
         "menu_type_desktop": "dropdown",
