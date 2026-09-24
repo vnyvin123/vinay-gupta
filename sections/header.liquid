@@ -268,7 +268,7 @@
     <div class="header__icons{% if section.settings.enable_country_selector or section.settings.enable_language_selector %} header__icons--localization header-localization{% endif %}">
       {%- if section.settings.choose_gift_text != blank and section.settings.choose_gift_link != blank -%}
       <a href="{{ section.settings.choose_gift_link }}" class="top-gift-btn">
-        {{ section.settings.choose_gift_text }}
+        {{ section.settings.choose_gift_text }} <img src="/cdn/shop/files/Line_15.svg">
       </a>
     {%- endif -%}
 
