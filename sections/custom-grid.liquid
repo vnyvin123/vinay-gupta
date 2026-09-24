@@ -1,0 +1,280 @@
+{{ 'section-custom-grid.css' | asset_url | stylesheet_tag }}
+
+<div class="custom-grid-section">
+  <div class="custom-grid-container">
+    
+    <div class="custom-grid-header">
+      <h2>{{ section.settings.section_title | escape }}</h2>
+    </div>
+
+    <!-- 6 Product Grid Cards -->
+    <div class="custom-products-grid">
+      {% for block in section.blocks %}
+        {% assign prod = block.settings.product %}
+        {% if prod != blank %}
+          <div class="custom-grid-item" data-block-id="{{ block.id }}">
+            <div class="custom-grid-image-wrapper">
+              <img src="{{ prod.featured_image | image_url: width: 600 }}" alt="{{ prod.title | escape }}" loading="lazy">
+              <!-- Trigger Popup Button (+) -->
+              <button type="button" class="quick-view-trigger-btn" aria-label="Quick view {{ prod.title | escape }}" data-product-handle="{{ prod.handle }}">+</button>
+            </div>
+          </div>
+        {% else %}
+          <!-- Empty State fallback preview item -->
+          <div class="custom-grid-item placeholder-item">
+            <div class="custom-grid-image-wrapper">
+              <div class="svg-placeholder">Product {{ forloop.index }}</div>
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Dynamic Popup Modal Overlay -->
+<div id="custom-quickview-modal" class="custom-modal-overlay" aria-hidden="true">
+  <div class="custom-modal-dialog">
+    <button type="button" class="custom-modal-close" id="modal-close-btn">&times;</button>
+    <div class="custom-modal-content-loading">Loading product data...</div>
+    <div class="custom-modal-body" style="display: none;">
+      <!-- Populated dynamically via Vanilla JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Secure embedded json dataset for Javascript consumption -->
+<script type="application/json" id="custom-grid-products-data">
+  [
+    {% for block in section.blocks %}
+      {% assign prod = block.settings.product %}
+      {% if prod != blank %}
+        {
+          "handle": {{ prod.handle | json }},
+          "title": {{ prod.title | json }},
+          "price": {{ prod.price | money | json }},
+          "description": {{ prod.description | strip_html | truncate: 140 | json }},
+          "variants": {{ prod.variants | json }},
+          "featured_image": {{ prod.featured_image | image_url: width: 600 | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {% endif %}
+    {% endfor %}
+  ]
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const modal = document.getElementById("custom-quickview-modal");
+  const modalBody = modal.querySelector(".custom-modal-body");
+  const modalLoading = modal.querySelector(".custom-modal-content-loading");
+  const closeBtn = document.getElementById("modal-close-btn");
+  
+  // Parse products data safely from script tag
+  let productDataMap = {};
+  try {
+    const rawData = document.getElementById("custom-grid-products-data").textContent;
+    const productsArray = JSON.parse(rawData);
+    productsArray.forEach(p => {
+      productDataMap[p.handle] = p;
+    });
+  } catch(e) {
+    console.error("Error parsing product JSON schema metadata", e);
+  }
+
+  // Open Popup Event Handlers
+  document.querySelectorAll(".quick-view-trigger-btn").forEach(button => {
+    button.addEventListener("click", function() {
+      const handle = this.getAttribute("data-product-handle");
+      const product = productDataMap[handle];
+      
+      if (!product) return;
+
+      // Render Popup HTML Structure dynamically using Vanilla JS templates
+      renderPopupContent(product);
+      modal.setAttribute("aria-hidden", "false");
+      modal.classList.add("is-active");
+    });
+  });
+
+  // Close Popup Actions
+  function closeModal() {
+    modal.setAttribute("aria-hidden", "true");
+    modal.classList.remove("is-active");
+  }
+
+  closeBtn.addEventListener("click", closeModal);
+  modal.addEventListener("click", function(e) {
+    if (e.target === modal) closeModal();
+  });
+
+  function renderPopupContent(product) {
+    modalLoading.style.display = "none";
+    modalBody.style.display = "block";
+
+    // Organize options dynamically
+    let optionsHTML = "";
+    if (product.variants && product.variants.length > 0) {
+      // Find option categories (e.g., Color, Size)
+      product.variants[0].option1 ? optionsHTML += buildOptionGroup(product, 1) : "";
+      product.variants[0].option2 ? optionsHTML += buildOptionGroup(product, 2) : "";
+    }
+
+    modalBody.innerHTML = `
+      <div class="modal-product-layout">
+        <div class="modal-product-image">
+          <img src="${product.featured_image}" alt="${product.title}">
+        </div>
+        <div class="modal-product-details">
+          <h3>${product.title}</h3>
+          <div class="modal-product-price">${product.price}</div>
+          <p class="modal-product-desc">${product.description || ""}</p>
+          
+          <div class="modal-variants-container">
+            ${optionsHTML}
+          </div>
+
+          <button type="button" id="modal-add-to-cart-btn" class="custom-add-to-cart-btn" data-variants='${JSON.stringify(product.variants)}'>
+            ADD TO CART &rarr;
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Attach listener to newly created Add to Cart button
+    document.getElementById("modal-add-to-cart-btn").addEventListener("click", handleAddToCart);
+  }
+
+  function buildOptionGroup(product, optionIndex) {
+    const optionNameKey = `option${optionIndex}`;
+    // Extract unique values for this option index
+    const uniqueValues = [...new Set(product.variants.map(v => v[optionNameKey]))].filter(Boolean);
+    const optionTitle = product.variants[0][`option${optionIndex}`] ? `Option ${optionIndex}` : "";
+
+    return `
+      <div class="variant-group">
+        <label class="variant-label">${optionTitle}</label>
+        <div class="variant-swatches" data-option-index="${optionIndex}">
+          ${uniqueValues.map((val, idx) => `
+            <button type="button" class="swatch-btn ${idx === 0 ? 'selected' : ''}" data-value="${val}">${val}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Handle swatch selections dynamically
+  document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("swatch-btn")) {
+      const parent = e.target.parentElement;
+      parent.querySelectorAll(".swatch-btn").forEach(btn => btn.classList.remove("selected"));
+      e.target.classList.add("selected");
+    }
+  });
+
+  // Vanilla JS Add to Cart Handler implementing the "Soft Winter Jacket" conditional rule
+  async function handleAddToCart(e) {
+    const btn = e.currentTarget;
+    const variants = JSON.parse(btn.getAttribute("data-variants"));
+    
+    // Collect currently selected options from UI swatches
+    const selectedSwatches = modalBody.querySelectorAll(".swatch-btn.selected");
+    let selectedOpt1 = selectedSwatches[0] ? selectedSwatches[0].getAttribute("data-value") : null;
+    let selectedOpt2 = selectedSwatches[1] ? selectedSwatches[1].getAttribute("data-value") : null;
+
+    // Match variant ID
+    let matchedVariant = variants.find(v => {
+      let match1 = !v.option1 || v.option1 === selectedOpt1;
+      let match2 = !v.option2 || v.option2 === selectedOpt2;
+      return match1 && match2;
+    });
+
+    if (!matchedVariant && variants.length > 0) {
+      matchedVariant = variants[0]; // Fallback safety match
+    }
+
+    let itemsPayload = [{
+      id: matchedVariant.id,
+      quantity: 1
+    }];
+
+    // CONDITIONAL REQUIREMENT RULE:
+    // "When any product with variant options Black and Medium is added to the cart the “Soft Winter Jacket” should also be automatically added"
+    const isBlackColor = (selectedOpt1 === "Black" || selectedOpt2 === "Black");
+    const isMediumSize = (selectedOpt1 === "Medium" || selectedOpt2 === "Medium");
+
+    if (isBlackColor && isMediumSize) {
+      // NOTE: Replace with the actual target Soft Winter Jacket variant ID from your catalog setup
+      const softWinterJacketVariantId = "SET_YOUR_WINTER_JACKET_VARIANT_ID_HERE"; 
+      itemsPayload.push({
+        id: softWinterJacketVariantId,
+        quantity: 1
+      });
+    }
+
+    // Submit request via Shopify Vanilla AJAX Cart API endpoint
+    try {
+      btn.textContent = "ADDING...";
+      let response = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: itemsPayload })
+      });
+      
+      if (response.ok) {
+        alert("Product added successfully to your cart!");
+        closeModal();
+      } else {
+        let errData = await response.json();
+        alert("Error adding item: " + (errData.description || "Check console"));
+      }
+    } catch (error) {
+      console.error("Cart Network Exception:", error);
+    } finally {
+      btn.textContent = "ADD TO CART →";
+    }
+  }
+});
+</script>
+
+{% schema %}
+{
+  "name": "Custom Product Grid",
+  "tag": "section",
+  "class": "section-grid-wrapper",
+  "settings": [
+    {
+      "type": "text",
+      "id": "section_title",
+      "label": "Section Heading",
+      "default": "Tisso vison in the wild"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product_block",
+      "name": "Grid Product",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Select Product"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom Product Grid",
+      "blocks": [
+        { "type": "product_block" },
+        { "type": "product_block" },
+        { "type": "product_block" },
+        { "type": "product_block" },
+        { "type": "product_block" },
+        { "type": "product_block" }
+      ]
+    }
+  ]
+}
+{% endschema %}
