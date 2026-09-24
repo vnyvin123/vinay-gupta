@@ -216,14 +216,16 @@
 {%- if section.settings.top_message != blank -%}
   <div class="top-gift-bar">
     <span>{{ section.settings.top_message }}</span>
-    
+          </div>
+    {%- endif -%}
+
     {%- if section.settings.choose_gift_text != blank and section.settings.choose_gift_link != blank -%}
       <a href="{{ section.settings.choose_gift_link }}" class="top-gift-btn">
         {{ section.settings.choose_gift_text }}
       </a>
     {%- endif -%}
-  </div>
-{%- endif -%}
+
+
    
 {% comment %} {%- liquid
       if section.settings.menu != blank
