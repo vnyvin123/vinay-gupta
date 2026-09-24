@@ -15,3 +15,9 @@ padding:2px 10px;
          grid-template-columns: 1fr auto 1fr !important;
        }
 }
+.top-gift-bar span{
+font-weight: 400;
+font-style: Regular;
+font-size: 16px;
+line-height: 13.42px;
+}
