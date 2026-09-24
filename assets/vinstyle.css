@@ -4,7 +4,7 @@
     padding:10px 15px;
     color:#000000;
     display:flex;
-    
+    align-items: center;
 }
 .top-gift-btn span{
 padding:2px 10px;
