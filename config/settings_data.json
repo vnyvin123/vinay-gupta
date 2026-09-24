@@ -122,12 +122,12 @@
     "predictive_search_show_vendor": false,
     "predictive_search_show_price": false,
     "currency_code_enabled": true,
-    "cart_type": "notification",
+    "cart_type": "drawer",
     "show_vendor": false,
     "show_cart_note": false,
     "cart_drawer_collection": "",
     "cart_color_scheme": "scheme-1",
-    "customer_account_menu": "customer-account-main-menu",
+    "customer_account_menu": "footer",
     "sections": {
       "main-password-header": {
         "type": "main-password-header",
